@@ -1,0 +1,125 @@
+#include <iomanip>
+#include "raylib.h"
+
+#include "Vec2.hpp"
+#include "Timer.hpp"
+#include "Button.hpp"
+
+#define BGCOL Color{22, 20, 17, 255}
+#define TEXTCOL Color{180, 180, 180, 255}
+#define EXTREASCOL Color{41, 47, 51, 255}
+#define TIMERCOL Color{80, 190, 190, 255}
+#define TIMERINNERRINGCOL Color{0, 40, 40, 255}
+#define BUTTONCOL Color{203, 166, 102, 255}
+
+
+
+int main () {
+    constexpr int InitScreenWidth = 1200, InitScreenHeight = 800;
+
+    // Initialise window
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    InitWindow(InitScreenWidth, InitScreenHeight, "Productivity Timer");
+    SetExitKey(KEY_NULL);
+    SetWindowMinSize(800,600);
+
+    // Add custom font and smoothing for scaling
+    const Font FontLarge = LoadFontEx("../Resources/segoeui.ttf", 128, nullptr, 0);
+    const Font FontMedium = LoadFontEx("../Resources/segoeui.ttf", 96, nullptr, 0);
+    const Font FontSmall = LoadFontEx("../Resources/segoeui.ttf", 54, nullptr, 0);
+    SetTextureFilter(FontLarge.texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(FontMedium.texture, TEXTURE_FILTER_BILINEAR);
+
+    // Create Timer instance
+    auto Tmr = Timer();
+
+    // Create function to add text to scene
+    auto AddText = [&FontSmall, &FontMedium, &FontLarge](const char* text, const Vec2 &pos, const float fontSize, const Color color = TEXTCOL) {
+        const Font *font_ptr;
+        if (fontSize < 40)
+            font_ptr = &FontSmall;
+        else if (fontSize < 70)
+            font_ptr = &FontMedium;
+        else
+            font_ptr = &FontLarge;
+
+        const Vector2 textSize = MeasureTextEx(*font_ptr, text, fontSize, 0.0f);
+        DrawTextEx(*font_ptr, text, (pos - Vec2(textSize)/2), fontSize, 0.0f, color);
+    };
+
+
+    while (!WindowShouldClose()) {
+        const Vec2 ScreenDims = {GetScreenWidth(), GetScreenHeight()};
+        const Vec2 MousePos = GetMousePosition();
+        const float scale = fminf(ScreenDims.x / 1200.0f, ScreenDims.y / 700.0f);
+        const float PanelWidth = ScreenDims.x / 2;
+        // const int padding = 40 * scale;
+
+        BeginDrawing();
+        ClearBackground(BGCOL);
+
+        DrawLineEx({ScreenDims.x/2,20.0f*scale}, {ScreenDims.x/2,ScreenDims.y - 20.0f*scale}, 2, EXTREASCOL);
+
+        AddText("TODO LIST", {PanelWidth/2.0f, 60.0f * scale}, 50);
+        AddText("FOCUS TIMER", {PanelWidth*1.5f, 60.0f * scale}, 50);
+
+        // Initialise timer
+        Tmr.SetTimer(1);
+
+
+        Vec2 TimerCentre = Vec2{PanelWidth*1.5f, ScreenDims.y/2.0f} + Vec2{0,-30};
+
+        // Timer ring
+        DrawRing(TimerCentre, 115*scale, 140*scale, 0.0f, 360.0f, 0, TIMERINNERRINGCOL);
+        DrawRing(TimerCentre, 120*scale, 140*scale, -90.0f, 270.0f - (360.0f*Tmr.Progress()), 100, TIMERCOL);
+
+        // Add timer text
+        AddText(Tmr.GetCountdownTime().c_str(), TimerCentre, 40 * scale);
+
+        // Add timer Start Stop
+        Button StartBtn;
+        auto strtBtnPos = TimerCentre + Vec2{0.0f,220.0f * scale};
+        if (!Tmr.isRunning) {
+            StartBtn = Button(Vec2{140.0f, 56.0f}*scale, {0, 170, 70, 255});
+            StartBtn.Draw(strtBtnPos);
+            AddText("Start", strtBtnPos, 30.0f * scale);
+        } else {
+            StartBtn = Button(Vec2{140.0f, 56.0f}*scale, {145, 25, 25, 255});
+            StartBtn.Draw(strtBtnPos);
+            AddText("Stop", strtBtnPos, 30.0f * scale);
+        }
+
+        // Add Reset button
+        auto rstBtnPos = TimerCentre + Vec2{0.0f,300.0f * scale};
+        Button ResetBtn(Vec2{140.0f, 56.0f}*scale, {35,35,35,255});
+        ResetBtn.Draw(rstBtnPos);
+        AddText("Reset", rstBtnPos, 30 * scale);
+
+        // Add timer controls
+        if ( (CheckCollisionPointRec(MousePos, StartBtn._btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+                || IsKeyPressed(KEY_SPACE) )
+        {
+            if (!Tmr.isRunning) {
+                Tmr.Resume();
+            } else {
+                Tmr.Pause();
+            }
+        }
+
+        if ( (CheckCollisionPointRec(MousePos, ResetBtn._btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+                || (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R)) )
+        {
+            Tmr.Reset();
+        }
+
+        if (Tmr.Complete()) {
+            Tmr.Pause();
+        }
+
+        EndDrawing();
+    }
+
+    UnloadFont(FontLarge);
+    UnloadFont(FontMedium);
+    CloseWindow();
+}
