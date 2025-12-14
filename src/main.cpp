@@ -4,14 +4,27 @@
 #include "Vec2.hpp"
 #include "Timer.hpp"
 #include "Button.hpp"
+#include "TextBox.hpp"
 
+#ifndef BGCOL
 #define BGCOL Color{22, 20, 17, 255}
-#define TEXTCOL Color{180, 180, 180, 255}
-#define EXTREASCOL Color{41, 47, 51, 255}
-#define TIMERCOL Color{80, 190, 190, 255}
-#define TIMERINNERRINGCOL Color{0, 40, 40, 255}
-#define BUTTONCOL Color{203, 166, 102, 255}
+#endif
 
+#ifndef TEXTCOL
+#define TEXTCOL Color{180, 180, 180, 255}
+#endif
+
+#ifndef EXTRASCOL
+#define EXTRASCOL Color{41, 47, 51, 255}
+#endif
+
+#ifndef TIMERCOL
+#define TIMERCOL Color{80, 190, 190, 255}
+#endif
+
+#ifndef TIMERINNERRINGCOL
+#define TIMERINNERRINGCOL Color{0, 40, 40, 255}
+#endif
 
 
 int main () {
@@ -32,6 +45,13 @@ int main () {
 
     // Create Timer instance
     auto Tmr = Timer();
+    Tmr.SetTimer(10);
+    TextBox TimerTBx("10");
+
+    // Add buttons
+    Button ResetBtn("Reset", {35,35,35,255});
+    Button StartBtn("Start", {0, 170, 70, 255});
+    Button StopBtn("Stop", {145, 25, 25, 255});
 
     // Create function to add text to scene
     auto AddText = [&FontSmall, &FontMedium, &FontLarge](const char* text, const Vec2 &pos, const float fontSize, const Color color = TEXTCOL) {
@@ -49,24 +69,23 @@ int main () {
 
 
     while (!WindowShouldClose()) {
+        // Gather constants
         const Vec2 ScreenDims = {GetScreenWidth(), GetScreenHeight()};
         const Vec2 MousePos = GetMousePosition();
         const float scale = fminf(ScreenDims.x / 1200.0f, ScreenDims.y / 700.0f);
         const float PanelWidth = ScreenDims.x / 2;
-        // const int padding = 40 * scale;
 
+        // Screen setup
         BeginDrawing();
         ClearBackground(BGCOL);
 
-        DrawLineEx({ScreenDims.x/2,20.0f*scale}, {ScreenDims.x/2,ScreenDims.y - 20.0f*scale}, 2, EXTREASCOL);
+        DrawLineEx({ScreenDims.x/2,20.0f*scale}, {ScreenDims.x/2,ScreenDims.y - 20.0f*scale}, 2, EXTRASCOL);
 
         AddText("TODO LIST", {PanelWidth/2.0f, 60.0f * scale}, 50);
         AddText("FOCUS TIMER", {PanelWidth*1.5f, 60.0f * scale}, 50);
 
-        // Initialise timer
-        Tmr.SetTimer(1);
-
-
+        /* === TIMER === */
+        // Add timer
         Vec2 TimerCentre = Vec2{PanelWidth*1.5f, ScreenDims.y/2.0f} + Vec2{0,-30};
 
         // Timer ring
@@ -77,27 +96,21 @@ int main () {
         AddText(Tmr.GetCountdownTime().c_str(), TimerCentre, 40 * scale);
 
         // Add timer Start Stop
-        Button StartBtn;
         auto strtBtnPos = TimerCentre + Vec2{0.0f,220.0f * scale};
         if (!Tmr.isRunning) {
-            StartBtn = Button(Vec2{140.0f, 56.0f}*scale, {0, 170, 70, 255});
-            StartBtn.Draw(strtBtnPos);
-            AddText("Start", strtBtnPos, 30.0f * scale);
+            StartBtn.Draw(strtBtnPos, {140.0f*scale, 56.0f*scale}, 30.0f*scale, AddText);
         } else {
-            StartBtn = Button(Vec2{140.0f, 56.0f}*scale, {145, 25, 25, 255});
-            StartBtn.Draw(strtBtnPos);
-            AddText("Stop", strtBtnPos, 30.0f * scale);
+            StopBtn.Draw(strtBtnPos, {140.0f*scale, 56.0f*scale}, 30.0f*scale, AddText);
         }
 
         // Add Reset button
         auto rstBtnPos = TimerCentre + Vec2{0.0f,300.0f * scale};
-        Button ResetBtn(Vec2{140.0f, 56.0f}*scale, {35,35,35,255});
-        ResetBtn.Draw(rstBtnPos);
-        AddText("Reset", rstBtnPos, 30 * scale);
+        ResetBtn.Draw(rstBtnPos, {140.0f*scale, 56.0f*scale}, 30.0f*scale, AddText);
+
 
         // Add timer controls
         if ( (CheckCollisionPointRec(MousePos, StartBtn._btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
-                || IsKeyPressed(KEY_SPACE) )
+                || IsKeyPressed(KEY_SPACE) && !TimerTBx.isSelected() )
         {
             if (!Tmr.isRunning) {
                 Tmr.Resume();
@@ -114,6 +127,49 @@ int main () {
 
         if (Tmr.Complete()) {
             Tmr.Pause();
+        }
+
+        // Add timer textbox
+        TimerTBx.Draw(TimerCentre + Vec2{0.0f, -190.0f*scale}, Vec2{130.0f, 40.0f}*scale, 30.0f*scale, AddText);
+
+
+        if ( CheckCollisionPointRec(MousePos, TimerTBx.TBoxRect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) ) {
+            TimerTBx.Select();
+        }
+
+        if ( IsKeyPressed(KEY_ESCAPE) ) {
+            TimerTBx.Deselect();
+        }
+
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            bool clickedOnUI = CheckCollisionPointRec(MousePos, StartBtn._btn_rect) ||
+                               CheckCollisionPointRec(MousePos, ResetBtn._btn_rect) ||
+                               CheckCollisionPointRec(MousePos, TimerTBx.TBoxRect);
+
+            if (!clickedOnUI) {
+                TimerTBx.Deselect();
+            }
+        }
+
+        if (TimerTBx.isSelected()) {
+            int key = GetCharPressed();
+            while (key > 0) {
+                if ( (key >= '0' && key <= '9') && TimerTBx.lenText() < 4) {
+                    TimerTBx.AppendChar(key);
+                }
+                key = GetCharPressed();
+            }
+            if (IsKeyPressed(KEY_BACKSPACE)) {
+                TimerTBx.Backspace();
+            }
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
+                if (!Tmr.isRunning) {
+                    Tmr.Reset();
+                    int num = TimerTBx.GetNumFromTxt();
+                    Tmr.SetTimer(num);
+                    TimerTBx.Deselect();
+                }
+            }
         }
 
         EndDrawing();

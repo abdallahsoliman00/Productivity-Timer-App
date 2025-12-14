@@ -66,7 +66,7 @@ public:
     }
 
     [[nodiscard]] std::string GetCountdownTime() const {
-        if (!isRunning && PausedTime_s == 0) {
+        if (!isRunning && PausedTime_s == 0.0) {
             return std::to_string(SetTime_m) + ":00";
         }
         const double tr = TimeRemaining();

@@ -3,9 +3,14 @@
 
 #include "Vec2.hpp"
 
+#ifndef BUTTONCOL
+#define BUTTONCOL Color{203, 166, 102, 255}
+#endif
+
+
 class Button {
-    Vec2 _dims = {140.0f, 56.0f};
-    Color _color = {203, 166, 102, 255};
+    Color _color = BUTTONCOL;
+    const char *_text = nullptr;
 
 public:
     Rectangle _btn_rect = {};
@@ -14,14 +19,14 @@ public:
 
     explicit Button(const Color color) : _color(color) {}
 
-    explicit Button(const Vec2 &dims) : _dims(dims) {}
+    explicit Button(const char* txt, const Color color) : _color(color), _text(txt) {}
 
-    explicit Button(const Vec2 &dims, const Color color) : _dims(dims), _color(color) {}
-
-    void Draw(const Vec2 &pos) {
-        const auto StartPos = pos - _dims/2;
-        _btn_rect = {StartPos.x, StartPos.y, _dims.x, _dims.y};
+    template <typename Func>
+    void Draw(const Vec2 &pos, const Vec2 &dims, const float fontSize, Func DrawTextFunc) {
+        const auto StartPos = pos - dims/2;
+        _btn_rect = {StartPos.x, StartPos.y, dims.x, dims.y};
         DrawRectangleRounded(_btn_rect, 0.3f, 10, _color);
+        DrawTextFunc(_text, pos, fontSize);
     }
 
     Button& operator=(const Button &other) = default;
