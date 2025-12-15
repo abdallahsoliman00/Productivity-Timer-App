@@ -23,6 +23,8 @@ class TextBox {
     int _text_len = 0;
     bool _selected = false;
     bool _cleared = false;
+    bool _auto_clear = false;
+    int _max_length = 149;
 
 public:
     Rectangle TBoxRect = {};
@@ -32,6 +34,16 @@ public:
     explicit TextBox(const Color color) : _color(color) {}
 
     explicit TextBox(const char* text) {
+        int idx = 0;
+        while (text[idx] != '\0') {
+            _text[idx] = text[idx];
+            idx++;
+        }
+        _text[idx] = '\0';
+    }
+
+    explicit TextBox(const char* text, const bool autoClear, const int maxLength = 149)
+        : _auto_clear(autoClear), _max_length(maxLength < 150 ? maxLength : 149) {
         int idx = 0;
         while (text[idx] != '\0') {
             _text[idx] = text[idx];
@@ -50,7 +62,6 @@ public:
 
     void Select() {
         _selected = true;
-        Clear();
     }
 
     void Deselect() {
@@ -59,7 +70,10 @@ public:
     }
 
     void AppendChar(const char c) {
-        if (_text_len < 149) {
+        if (_auto_clear && !_cleared) {
+            Clear();
+        }
+        if (_text_len < _max_length) {
             _text[_text_len++] = c;
             _text[_text_len] = '\0';
         }

@@ -27,36 +27,54 @@
 #endif
 
 
+struct TodoItem {
+    char _text[150] = {};
+    bool _completed = false;
+};
+
+
 int main () {
-    constexpr int InitScreenWidth = 1200, InitScreenHeight = 800;
+    constexpr int InitScreenWidth = 1400, InitScreenHeight = 900;
 
     // Initialise window
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(InitScreenWidth, InitScreenHeight, "Productivity Timer");
     SetExitKey(KEY_NULL);
-    SetWindowMinSize(800,600);
+    SetWindowMinSize(1400,900);
 
     // Add custom font and smoothing for scaling
     const Font FontLarge = LoadFontEx("../Resources/segoeui.ttf", 128, nullptr, 0);
     const Font FontMedium = LoadFontEx("../Resources/segoeui.ttf", 96, nullptr, 0);
     const Font FontSmall = LoadFontEx("../Resources/segoeui.ttf", 54, nullptr, 0);
+    const Font FontVSmall = LoadFontEx("../Resources/segoeui.ttf", 28, nullptr, 0);
     SetTextureFilter(FontLarge.texture, TEXTURE_FILTER_BILINEAR);
     SetTextureFilter(FontMedium.texture, TEXTURE_FILTER_BILINEAR);
 
     // Create Timer instance
     auto Tmr = Timer();
     Tmr.SetTimer(10);
-    TextBox TimerTBx("10");
+    TextBox TimerTBx("10", true, 4);
+
+    // Create todo items
+    constexpr int todo_count = 10;
+    TodoItem Todos[todo_count] = {};
+    TextBox TodoTBx("", true, 149);
+    bool toggledTodoTBx = false;
 
     // Add buttons
     Button ResetBtn("Reset", {35,35,35,255});
     Button StartBtn("Start", {0, 170, 70, 255});
     Button StopBtn("Stop", {145, 25, 25, 255});
 
+    Button AddTaskBtn("+ Add Task", BUTTONCOL);
+
+
     // Create function to add text to scene
-    auto AddText = [&FontSmall, &FontMedium, &FontLarge](const char* text, const Vec2 &pos, const float fontSize, const Color color = TEXTCOL) {
+    auto AddText = [&FontVSmall, &FontSmall, &FontMedium, &FontLarge](const char* text, const Vec2 &pos, const float fontSize, const Color color = TEXTCOL) {
         const Font *font_ptr;
-        if (fontSize < 40)
+        if (fontSize < 28)
+            font_ptr = &FontVSmall;
+        else if (fontSize < 40)
             font_ptr = &FontSmall;
         else if (fontSize < 70)
             font_ptr = &FontMedium;
@@ -66,6 +84,7 @@ int main () {
         const Vector2 textSize = MeasureTextEx(*font_ptr, text, fontSize, 0.0f);
         DrawTextEx(*font_ptr, text, (pos - Vec2(textSize)/2), fontSize, 0.0f, color);
     };
+
 
 
     while (!WindowShouldClose()) {
@@ -81,10 +100,13 @@ int main () {
 
         DrawLineEx({ScreenDims.x/2,20.0f*scale}, {ScreenDims.x/2,ScreenDims.y - 20.0f*scale}, 2, EXTRASCOL);
 
-        AddText("TODO LIST", {PanelWidth/2.0f, 60.0f * scale}, 50);
-        AddText("FOCUS TIMER", {PanelWidth*1.5f, 60.0f * scale}, 50);
+        AddText("TODO LIST", {PanelWidth/2.0f, 60.0f * scale}, 60);
+        AddText("FOCUS TIMER", {PanelWidth*1.5f, 60.0f * scale}, 60);
+
+
 
         /* === TIMER === */
+        /* Buttons and UI */
         // Add timer
         Vec2 TimerCentre = Vec2{PanelWidth*1.5f, ScreenDims.y/2.0f} + Vec2{0,-30};
 
@@ -107,8 +129,12 @@ int main () {
         auto rstBtnPos = TimerCentre + Vec2{0.0f,300.0f * scale};
         ResetBtn.Draw(rstBtnPos, {140.0f*scale, 56.0f*scale}, 30.0f*scale, AddText);
 
+        // Add timer textbox
+        TimerTBx.Draw(TimerCentre + Vec2{0.0f, -190.0f*scale}, Vec2{130.0f, 40.0f}*scale, 30.0f*scale, AddText);
+        AddText("Set time (minutes):", TimerCentre + Vec2{0.0f, -225.0f*scale}, 20*scale, {200,200,200,180});
 
-        // Add timer controls
+
+        /* Controls */
         if ( (CheckCollisionPointRec(MousePos, StartBtn._btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
                 || IsKeyPressed(KEY_SPACE) && !TimerTBx.isSelected() )
         {
@@ -128,10 +154,6 @@ int main () {
         if (Tmr.Complete()) {
             Tmr.Pause();
         }
-
-        // Add timer textbox
-        TimerTBx.Draw(TimerCentre + Vec2{0.0f, -190.0f*scale}, Vec2{130.0f, 40.0f}*scale, 30.0f*scale, AddText);
-
 
         if ( CheckCollisionPointRec(MousePos, TimerTBx.TBoxRect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) ) {
             TimerTBx.Select();
@@ -154,7 +176,7 @@ int main () {
         if (TimerTBx.isSelected()) {
             int key = GetCharPressed();
             while (key > 0) {
-                if ( (key >= '0' && key <= '9') && TimerTBx.lenText() < 4) {
+                if (key >= '0' && key <= '9') {
                     TimerTBx.AppendChar(key);
                 }
                 key = GetCharPressed();
@@ -162,7 +184,7 @@ int main () {
             if (IsKeyPressed(KEY_BACKSPACE)) {
                 TimerTBx.Backspace();
             }
-            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
+            if ((IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER) && TimerTBx.lenText() != 0)) {
                 if (!Tmr.isRunning) {
                     Tmr.Reset();
                     int num = TimerTBx.GetNumFromTxt();
@@ -170,6 +192,23 @@ int main () {
                     TimerTBx.Deselect();
                 }
             }
+        }
+
+        /* === TODO LIST === */
+        const Vec2 todoBtnPos = {125.0f*scale, 160.0f};
+        constexpr float taskBtnWidth = 120.0f;
+        const float todoTbxWidth = (PanelWidth - 2.0f*todoBtnPos.x)/scale + taskBtnWidth;
+
+        AddTaskBtn.Draw(todoBtnPos, {taskBtnWidth*scale, 40.0f*scale}, 24.0f*scale, AddText, BGCOL);
+
+        if ( (CheckCollisionPointRec(MousePos, AddTaskBtn._btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+            || (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_T)) )
+        {
+            toggledTodoTBx = !toggledTodoTBx;
+        }
+
+        if (toggledTodoTBx) {
+            TodoTBx.Draw(todoBtnPos + Vec2{(todoTbxWidth-taskBtnWidth)*0.5f*scale, 55.0f*scale}, Vec2{todoTbxWidth, 40.0f}*scale, 30.0f*scale, AddText);
         }
 
         EndDrawing();

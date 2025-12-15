@@ -1,6 +1,7 @@
 /* Button.hpp */
 #pragma once
 
+#include "TextBox.hpp"
 #include "Vec2.hpp"
 
 #ifndef BUTTONCOL
@@ -22,11 +23,11 @@ public:
     explicit Button(const char* txt, const Color color) : _color(color), _text(txt) {}
 
     template <typename Func>
-    void Draw(const Vec2 &pos, const Vec2 &dims, const float fontSize, Func DrawTextFunc) {
+    void Draw(const Vec2 &pos, const Vec2 &dims, const float fontSize, Func DrawTextFunc, const Color textCol = TEXTCOL) {
         const auto StartPos = pos - dims/2;
         _btn_rect = {StartPos.x, StartPos.y, dims.x, dims.y};
         DrawRectangleRounded(_btn_rect, 0.3f, 10, _color);
-        DrawTextFunc(_text, pos, fontSize);
+        DrawTextFunc(_text, pos, fontSize, textCol);
     }
 
     Button& operator=(const Button &other) = default;
