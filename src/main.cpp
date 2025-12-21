@@ -1,10 +1,14 @@
 #include <iomanip>
+#include <string>
+#include <vector>
 #include "raylib.h"
 
 #include "Vec2.hpp"
 #include "Timer.hpp"
 #include "Button.hpp"
 #include "TextBox.hpp"
+#include "StringManip.h"
+
 
 #ifndef BGCOL
 #define BGCOL Color{22, 20, 17, 255}
@@ -28,7 +32,7 @@
 
 
 struct TodoItem {
-    char _text[150] = {};
+    char _text[256] = {};
     bool _completed = false;
 };
 
@@ -69,8 +73,10 @@ int main () {
     Button AddTaskBtn("+ Add Task", BUTTONCOL);
 
 
-    // Create function to add text to scene
-    auto AddText = [&FontVSmall, &FontSmall, &FontMedium, &FontLarge](const char* text, const Vec2 &pos, const float fontSize, const Color color = TEXTCOL) {
+// Create function to add text to scene
+    auto AddText = [&FontVSmall, &FontSmall, &FontMedium, &FontLarge](
+        const char* text, const Vec2 &pos, const float fontSize, const Color color = TEXTCOL, const float maxWidth = 0.0f
+    ) {
         const Font *font_ptr;
         if (fontSize < 28)
             font_ptr = &FontVSmall;
@@ -82,7 +88,11 @@ int main () {
             font_ptr = &FontLarge;
 
         const Vector2 textSize = MeasureTextEx(*font_ptr, text, fontSize, 0.0f);
-        DrawTextEx(*font_ptr, text, (pos - Vec2(textSize)/2), fontSize, 0.0f, color);
+        if (maxWidth == 0.0f || textSize.x <= maxWidth) {
+            DrawTextEx(*font_ptr, text, (pos - Vec2(textSize)/2), fontSize, 0.0f, color);
+        } else {
+
+        }
     };
 
 
@@ -209,7 +219,10 @@ int main () {
 
         if (toggledTodoTBx) {
             TodoTBx.Draw(todoBtnPos + Vec2{(todoTbxWidth-taskBtnWidth)*0.5f*scale, 55.0f*scale}, Vec2{todoTbxWidth, 40.0f}*scale, 30.0f*scale, AddText);
+            TodoTBx.Select();
         }
+
+        AddText("HELLO HI HELLO WORLD THIS IS TEXT", {400.0f, 400.0f}, 40.0f, TEXTCOL, 300.0f);
 
         EndDrawing();
     }
@@ -218,3 +231,87 @@ int main () {
     UnloadFont(FontMedium);
     CloseWindow();
 }
+
+
+//
+// // Create function to add text to scene
+//     auto AddText = [&FontVSmall, &FontSmall, &FontMedium, &FontLarge](
+//         const char* text, const Vec2 &pos, const float fontSize, const Color color = TEXTCOL, const float maxWidth = 0.0f
+//     ) {
+//         const Font *font_ptr;
+//         if (fontSize < 28)
+//             font_ptr = &FontVSmall;
+//         else if (fontSize < 40)
+//             font_ptr = &FontSmall;
+//         else if (fontSize < 70)
+//             font_ptr = &FontMedium;
+//         else
+//             font_ptr = &FontLarge;
+//
+//         const Vector2 textSize = MeasureTextEx(*font_ptr, text, fontSize, 0.0f);
+//         if (maxWidth == 0.0f || textSize.x <= maxWidth) {
+//             DrawTextEx(*font_ptr, text, (pos - Vec2(textSize)/2), fontSize, 0.0f, color);
+//         } else {
+//             // Word wrapping logic
+//             std::string remainingText = text;
+//             std::vector<std::string> lines;
+//
+//             // First, split text into lines
+//             while (!remainingText.empty()) {
+//                 std::string currentLine;
+//                 int lastSpaceIdx = -1;
+//                 int currentIdx = 0;
+//
+//                 // Find the longest substring that fits within maxWidth
+//                 while (currentIdx <= static_cast<int>(remainingText.length())) {
+//                     std::string testLine = remainingText.substr(0, currentIdx);
+//                     Vector2 testSize = MeasureTextEx(*font_ptr, testLine.c_str(), fontSize, 0.0f);
+//
+//                     if (testSize.x > maxWidth) {
+//                         // Exceeded maxWidth - break at last space if available
+//                         if (lastSpaceIdx > 0) {
+//                             currentLine = remainingText.substr(0, lastSpaceIdx);
+//                             remainingText = remainingText.substr(lastSpaceIdx + 1); // Skip the space
+//                         } else {
+//                             // No space found, force break at current position
+//                             currentLine = remainingText.substr(0, currentIdx - 1);
+//                             remainingText = remainingText.substr(currentIdx - 1);
+//                         }
+//                         break;
+//                     }
+//
+//                     // Track last space position
+//                     if (currentIdx < static_cast<int>(remainingText.length()) && remainingText[currentIdx] == ' ') {
+//                         lastSpaceIdx = currentIdx;
+//                     }
+//
+//                     currentIdx++;
+//
+//                     // If we've processed all text, this is the last line
+//                     if (currentIdx > static_cast<int>(remainingText.length())) {
+//                         currentLine = remainingText;
+//                         remainingText = "";
+//                         break;
+//                     }
+//                 }
+//
+//                 if (!currentLine.empty()) {
+//                     lines.push_back(currentLine);
+//                 }
+//             }
+//
+//             // Calculate the x-position based on the first line (as if it was centered alone)
+//             auto [x, y] = MeasureTextEx(*font_ptr, lines[0].c_str(), fontSize, 0.0f);
+//             const float leftEdgeX = pos.x - x / 2.0f;
+//
+//             // Calculate total height for centering
+//             const float totalHeight = textSize.y * lines.size();
+//             const float startY = pos.y - totalHeight / 2.0f + textSize.y / 2.0f;
+//
+//             // Draw each line with left alignment at the first line's left edge
+//             for (size_t i = 0; i < lines.size(); i++) {
+//                 Vec2 linePos = {leftEdgeX, startY + i * textSize.y};
+//                 DrawTextEx(*font_ptr, lines[i].c_str(), linePos, fontSize, 0.0f, color);
+//             }
+//         }
+//     };

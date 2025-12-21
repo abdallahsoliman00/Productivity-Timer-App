@@ -19,12 +19,12 @@
 
 class TextBox {
     Color _color = TBXCOL;
-    char _text[150] = {};
+    char _text[256] = {};
     int _text_len = 0;
     bool _selected = false;
     bool _cleared = false;
     bool _auto_clear = false;
-    int _max_length = 149;
+    int _max_length = 255;
 
 public:
     Rectangle TBoxRect = {};
@@ -98,7 +98,7 @@ public:
     }
 
     template <typename Func>
-    void Draw(const Vec2 &pos, const Vec2 &dims, const float fontSize, const Func &DrawTextFunc) {
+    void Draw(const Vec2 &pos, const Vec2 &dims, const float fontSize, const Func &DrawTextFunc, const Color &textCol = TEXTCOL) {
         const auto StartPos = pos - dims/2;
         TBoxRect = {StartPos.x, StartPos.y, dims.x, dims.y};
         DrawRectangle(StartPos.x, StartPos.y, dims.x, dims.y, _color);
@@ -106,6 +106,6 @@ public:
             DrawRectangleLines(StartPos.x, StartPos.y, dims.x, dims.y, BUTTONCOL);
         else
             DrawRectangleLines(StartPos.x, StartPos.y, dims.x, dims.y, TEXTCOL);
-        DrawTextFunc(_text, pos, fontSize);
+        DrawTextFunc(_text, pos, fontSize, textCol);
     }
 };

@@ -3,7 +3,7 @@ project(TimerApp)
 
 set(CMAKE_CXX_STANDARD 20)
 
-# My own app
+
 add_executable(TimerApp src/main.cpp)
 
 target_include_directories(TimerApp PUBLIC
